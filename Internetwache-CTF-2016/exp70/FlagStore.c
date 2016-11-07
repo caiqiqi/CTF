@@ -35,7 +35,7 @@ int main() {
 		switch(answer) {
 			case 1:
 				printf("Enter an username:");
-				scanf("%s", username);
+				scanf("%s", username);  // 注册是时候没有做输入大小检查，可以overflow到is_admin
 				printf("Enter a password:");
 				scanf("%s", password);
 
@@ -55,7 +55,7 @@ int main() {
 				break;
 			case 2:
 				printf("Username:");
-				scanf("%499s", user);
+				scanf("%499s", user);  // 登录的时候做了检查，很安全
 				printf("Password:");
 				scanf("%499s", pw);
 
