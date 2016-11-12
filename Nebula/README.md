@@ -86,6 +86,55 @@ flag02@nebula:/home/flag02$ getflag
 You have successfully executed getflag on a target account
 ```
 然后就可以在flag02的shell里面执行`getflag`得到shell了。
+或者直接
+```sh
+$ USER="test && /bin/getflag"
+```
+反正这个 $USER 变量是我们可控的，我们可以已flag03的身份执行任意字符串。
 ## level03
 
+```sh
+for i in /home/flag03/writeable.d/* ; do
+    (ulimit -t 5; bash -x "$i")
+    rm -f "$i"
+done
+```
+其中ulimit -t 5控制CPU时间不超过5秒，bash -x "$i"用于执行$i文件。执行完之后删除文件本身。
 
+
+
+## level07
+参考:
+http://blog.yyx.me/posts/exploit-exercises-nebula-level-05-09.html
+在`/home/flag07`目录下找到一个`capture.pcap`，所以拖出来到宿主机上用wireshark分析。跟踪TCP流，发现
+`Password: backdoor...00Rm8.ate`
+根据经验，一般16进制工具中.都是代表\0，就是字符串结尾（其实.表示不可读字符，一般在一堆字符串中时基本就是\0），所
+以密码应该是backdoor。尝试登录，错误！于是在wireshark中吧TCP包切换到HEX显示，发现这段数据信息如下：
+`
+000000B9  62                                                 b
+000000BA  61                                                 a
+000000BB  63                                                 c
+000000BC  6b                                                 k
+000000BD  64                                                 d
+000000BE  6f                                                 o
+000000BF  6f                                                 o
+000000C0  72                                                 r
+000000C1  7f                                                 .
+000000C2  7f                                                 .
+000000C3  7f                                                 .
+000000C4  30                                                 0
+000000C5  30                                                 0
+000000C6  52                                                 R
+000000C7  6d                                                 m
+000000C8  38                                                 8
+000000C9  7f                                                 .
+000000CA  61                                                 a
+000000CB  74                                                 t
+000000CC  65                                                 e
+000000CD  0d                                                 .
+`
+![](img/屏幕快照 2016-11-12 下午7.40.33.png)
+![](img/屏幕快照 2016-11-12 下午7.50.11.png)
+![](img/屏幕快照 2016-11-12 下午7.50.16.png)
+竟然是7F，查ASCII码表发现7F是Backspace（退格），0D是CR（回车），所以就按照这个顺序重新比划了下，
+得到密码是backd00Rmate
