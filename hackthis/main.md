@@ -47,3 +47,14 @@ FDDE
 ```
 
 # Main 9
+看源码，找邮箱地址，换成自己的。
+# Main 10
+看源码，找到
+https://www.hackthis.co.uk/levels/extras/level10pass.txt
+"69bfe1e6e44821df7f8a0927bd7e61ef208fdb25deaa4353450bc3fb904abd52:f1abe1b083d12d181ae136cfc75b8d18a8ecb43ac4e9d1a36d6a9c75b6016b61"
+看到冒号应该是两个hash的分割
+于是用神站
+http://hashtoolkit.com/
+来crack这两个hash
+"http://hashtoolkit.com/reverse-hash/?hash=69bfe1e6e44821df7f8a0927bd7e61ef208fdb25deaa4353450bc3fb904abd52" -> carl
+"http://hashtoolkit.com/reverse-hash?hash=f1abe1b083d12d181ae136cfc75b8d18a8ecb43ac4e9d1a36d6a9c75b6016b61" -> guess
