@@ -241,7 +241,7 @@ http://blog.yyx.me/posts/exploit-exercises-nebula-level-05-09.html
 `Password: backdoor...00Rm8.ate`
 根据经验，一般16进制工具中.都是代表\0，就是字符串结尾（其实.表示不可读字符，一般在一堆字符串中时基本就是\0），所
 以密码应该是backdoor。尝试登录，错误！于是在wireshark中吧TCP包切换到HEX显示，发现这段数据信息如下：
-`
+```
 000000B9  62                                                 b
 000000BA  61                                                 a
 000000BB  63                                                 c
@@ -263,7 +263,7 @@ http://blog.yyx.me/posts/exploit-exercises-nebula-level-05-09.html
 000000CB  74                                                 t
 000000CC  65                                                 e
 000000CD  0d                                                 .
-`
+```
 ![](img/屏幕快照 2016-11-12 下午7.40.33.png)
 ![](img/屏幕快照 2016-11-12 下午7.50.11.png)
 ![](img/屏幕快照 2016-11-12 下午7.50.16.png)
