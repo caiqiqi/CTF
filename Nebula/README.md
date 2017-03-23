@@ -264,9 +264,11 @@ http://blog.yyx.me/posts/exploit-exercises-nebula-level-05-09.html
 000000CC  65                                                 e
 000000CD  0d                                                 .
 ```
-![](img/屏幕快照 2016-11-12 下午7.40.33.png)
-![](img/屏幕快照 2016-11-12 下午7.50.11.png)
-![](img/屏幕快照 2016-11-12 下午7.50.16.png)
+
+![](img/2016-11-12_pm7.40.33.png)
+![](img/2016-11-12_pm7.50.11.png)
+![](img/2016-11-12_pm7.50.16.png)
+
 竟然是7F，查ASCII码表发现7F是Backspace（退格），0D是CR（回车），
 于是上面的意思就是，用户输入到backdoor的时候，删除了三个字符，然后输入00Rm8后，又删除了一个字符，最后输入ate，然后按下回车键。
 所以最终结果拼凑起来就是： `backd00Rmate`
@@ -279,8 +281,10 @@ http://blog.yyx.me/posts/exploit-exercises-nebula-level-05-09.html
 执行`./flag09 /tmp/cqq_email`之后，得到输出
 `77caikiki AT protonmail dot com`
 但是我们注意这段代码:
+
 ```php
 $contents = preg_replace("/(\[email (.*)\])/e", "spam(\"\\2\")", $contents);
 ```
+
 `preg_replace`第一个参数后使用了`/e`模式。如果启用这种模式，那么preg_replace的第二个参数将会被作为代码执行。之前ThinkPHP也出现了这种漏洞。
 
